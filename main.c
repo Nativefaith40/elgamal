@@ -52,7 +52,9 @@ bool keys_generated = false;
 
 int main() {
     int ch;
+    mpz_t mpzy, mpzp, powgx;
 
+    
     initscr();
     noecho();
     curs_set(0);
@@ -89,11 +91,10 @@ int main() {
                 elgamal_key.g = find_primitive_root(elgamal_key.p);
                 elgamal_key.x = get_random_int(1, elgamal_key.p-1);
 
-                //elgamal_key.y = fmodl(powl(elgamal_key.g, elgamal_key.x), elgamal_key.p);
+                // elgamal_key.y = fmodl(powl(elgamal_key.g, elgamal_key.x), elgamal_key.p);
                 // equivalent y calculation with GNU multiple precision arithmetic library goes below:
                 
                 // y key calculation:
-                mpz_t mpzy, mpzp, powgx;
                 mpz_init(mpzy);
                 mpz_init(powgx);
                 mpz_init(mpzp);
@@ -107,6 +108,10 @@ int main() {
                 mpz_powm_ui(mpzy, powgx, 1, mpzp);
                 
                 elgamal_key.y = mpz_get_d(mpzy);
+                
+                mpz_clear(mpzy);
+                mpz_clear(mpzp);
+                mpz_clear(powgx);
                 
                 keys_generated = true;
                 initial_screen();
@@ -191,7 +196,7 @@ void show_about_window() {
     WINDOW *about_win;
     int ch;
     
-    char *about_win_content = "This program was written in spring 2017 with C and ncurses in xCode. Have fun and enjoy your day!\nMore about ncurses here - http://www.tldp.org/HOWTO/html_single/NCURSES-Programming-HOWTO/\n\nPress ESC to close this window";
+    char *about_win_content = "This program was written in spring 2017 with C and ncurses in xCode.\nMore about ncurses here - http://www.tldp.org/HOWTO/html_single/NCURSES-Programming-HOWTO/\nMore on GNU MPAL here - https://gmplib.org/\n\nPress ESC to close this window\nHave fun and enjoy your day! Dmitry Nikonenko";
     
     // about window params
     aw_height = LINES/4;
@@ -222,9 +227,7 @@ void show_input_window() {
     content_window = derwin(generic_window, iw_height-2, iw_width-2, 1, 1);
     box(generic_window, 0, 0);
 
-    
     mvwprintw(generic_window, 0, (iw_width-(int)strlen(title))/2, title);
-
     
     wrefresh(content_window);
     wrefresh(generic_window);
@@ -279,7 +282,6 @@ void show_input_window() {
     
     noecho();
     curs_set(0);
-    
     
     while((ch = getch()) != 27);
     destroy_win(generic_window);
@@ -368,27 +370,26 @@ void encrypt_input(char *input_content) {
         if (output_win_content) {
             free(output_win_content);
         }
+        
         FILE *crypted_file = fopen("output.txt", "w");
 
         int c1, c2;
         int i;
         mpz_t c1mpz, c2mpz, gmpz, kmpz, pmpz, ympz;
-        mpz_init(c1mpz);
-        mpz_init(c2mpz);
-        mpz_init(gmpz);
-        //mpz_init(kmpz);
-        mpz_init(pmpz);
         
-
         int k;
         for (i=0; i<strlen(input_content); i++) {
             // encoding goes here
             
             k = get_random_int(2, 10);
             
-            
             // for better crypting use random k in big range for each iteration
             // and use GNU multiple precision arithmetic library for c1 and c2 calculation (breaks encryption otherwise)
+            mpz_init(c1mpz);
+            mpz_init(c2mpz);
+            mpz_init(gmpz);
+            mpz_init(kmpz);
+            mpz_init(pmpz);
             
             // c1 calculation:
             // c1 = fmod(powl(elgamal_key.g, k), elgamal_key.p);
@@ -415,6 +416,13 @@ void encrypt_input(char *input_content) {
             c2 = mpz_get_d(c2mpz);
             fprintf(crypted_file,"%d ", c2);
             
+            mpz_clear(c1mpz);
+            mpz_clear(c2mpz);
+            mpz_clear(gmpz);
+            mpz_clear(kmpz);
+            mpz_clear(pmpz);
+            mpz_clear(ympz);
+            
         }
         fclose(crypted_file);
         get_output_file_content();
@@ -429,9 +437,11 @@ void decrypt_input(char *input_content) {
     
     if (input_content && keys_generated) {
         // decryption goes here
+        
         if (output_win_content) {
             free(output_win_content);
         }
+
         FILE *decrypted_file = fopen("output.txt", "w");
         
         // create buffer of 1000 long long to hold crypted keys from the input
@@ -507,6 +517,9 @@ char decrypt(long long c1, long long c2, int x, int p) {
     
     long r;
     r = mpz_get_d(result);
+    
+    mpz_clear(result);
+    mpz_clear(keyp);
     
     return r;
 }
